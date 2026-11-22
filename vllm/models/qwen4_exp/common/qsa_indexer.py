@@ -747,6 +747,13 @@ class QSAIndexerBackend(AttentionBackend):
         return "QWEN4_EXP_QSA_INDEXER"
 
     @staticmethod
+    def get_supported_kernel_block_sizes(kv_cache_spec=None) -> list[int]:
+        # LIv2 compresses four source tokens into one key. Cache-transfer
+        # geometry is expressed in source-token units, so one 128-key LIv2
+        # page corresponds to a 512-token kernel block on both P and D.
+        return [8, 128, 512]
+
+    @staticmethod
     def get_impl_cls():
         raise NotImplementedError(
             "QSA indexer caches run out-of-band and have no attention impl"
