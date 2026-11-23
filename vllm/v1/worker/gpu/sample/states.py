@@ -113,8 +113,13 @@ class SamplingStates:
         top_p_np = self.top_p.np[idx_mapping_np]
         do_top_k = np.any(top_k_np != self.vocab_size)
         do_top_p = np.any(top_p_np != 1.0)
-        top_k = self.top_k.gpu[expanded_idx_mapping] if do_top_k else None
-        top_p = self.top_p.gpu[expanded_idx_mapping] if do_top_p else None
+        # Advanced indexing lowers to the native Index kernel on Ascend. That
+        # kernel can fault during the PCP profile run for the full dummy batch;
+        # index_select keeps the same 1-D gather semantics and uses a stable
+        # implementation on this backend.
+        gather_indices = expanded_idx_mapping.long()
+        top_k = self.top_k.gpu.index_select(0, gather_indices) if do_top_k else None
+        top_p = self.top_p.gpu.index_select(0, gather_indices) if do_top_p else None
         has_topp_only_rows = bool(
             do_top_p and np.any((top_k_np >= vocab_size) & (top_p_np < 1.0))
         )

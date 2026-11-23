@@ -1055,8 +1055,15 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             self.step_timing.drafter_end()
 
         assert hidden_states is not None  # Last PP rank always has hidden_states
-        sample_hidden_states = hidden_states[input_batch.logits_indices]
+        sample_hidden_states = self._select_dummy_sample_hidden_states(
+            hidden_states, input_batch
+        )
         return hidden_states, sample_hidden_states
+
+    def _select_dummy_sample_hidden_states(
+        self, hidden_states: torch.Tensor, input_batch: InputBatch
+    ) -> torch.Tensor:
+        return hidden_states[input_batch.logits_indices]
 
     @torch.inference_mode()
     def _dummy_sampler_run(self, hidden_states: torch.Tensor) -> None:

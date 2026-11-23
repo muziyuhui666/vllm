@@ -138,8 +138,11 @@ class Sampler:
         idx_mapping_np = input_batch.idx_mapping_np
         cu_num_logits_np = input_batch.cu_num_logits_np
         expanded_local_pos = input_batch.expanded_local_pos
-        pos = input_batch.positions[input_batch.logits_indices]
-        input_ids = input_batch.input_ids[input_batch.logits_indices]
+        # Avoid both native advanced Index and GatherElements on the large PCP
+        # profile tensors. index_select has the required one-dimensional row
+        # semantics and is stable on Ascend 950.
+        pos = input_batch.positions.index_select(0, input_batch.logits_indices)
+        input_ids = input_batch.input_ids.index_select(0, input_batch.logits_indices)
         seq_lens_upper_bound_np = input_batch.seq_lens_cpu_upper_bound.numpy()
 
         # NOTE(woosuk): We intentionally compute num_nans before sampling to make clear
